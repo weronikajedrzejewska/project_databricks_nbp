@@ -82,9 +82,10 @@ def build_correlation_snapshot(df: DataFrame) -> DataFrame:
         .filter(F.col("a.currency_code") < F.col("b.currency_code"))
     )
 
+    as_of_date_df = last30.agg(F.max("rate_date").alias("as_of_date"))
+
     corr = (
         joined.groupBy(
-            F.max(F.col("a.rate_date")).alias("as_of_date"),
             F.col("a.currency_code").alias("currency_a"),
             F.col("b.currency_code").alias("currency_b"),
         )
@@ -92,6 +93,8 @@ def build_correlation_snapshot(df: DataFrame) -> DataFrame:
             F.corr(F.col("a.return_1d"), F.col("b.return_1d")).alias("corr_30d"),
             F.count("*").alias("obs_cnt"),
         )
+        .crossJoin(as_of_date_df)
+        .select("as_of_date", "currency_a", "currency_b", "corr_30d", "obs_cnt")
     )
 
     return corr
